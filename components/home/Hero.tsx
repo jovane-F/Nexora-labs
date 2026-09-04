@@ -79,7 +79,7 @@ export default function Hero() {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
               <Link
-                href="#services"
+                href="/services"
                 className="flex items-center justify-center px-7 py-3.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm sm:text-base backdrop-blur-md transition duration-300 w-full"
               >
                 Nos Services
@@ -93,7 +93,7 @@ export default function Hero() {
             className="pt-5 grid grid-cols-3 gap-3 sm:gap-6 border-t border-white/10 w-full"
           >
             <div>
-              <span className="block text-lg sm:text-2xl font-bold text-white">500+</span>
+              <span className="block text-lg sm:text-2xl font-bold text-white">50+</span>
               <span className="text-[11px] sm:text-xs text-gray-400">Projets réalisés</span>
             </div>
             <div>
