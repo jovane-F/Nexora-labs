@@ -1,26 +1,59 @@
+/* src/app/globals.css */
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* --- PALETTE DE COULEURS DE L'IMAGE --- */
+  /* Le fond bleu-noir très profond */
+  --color-nexora-bg: #0B0E17;
+  
+  /* Le bleu principal des accents et des gros textes */
+  --color-nexora-blue: #00A3FF;
+  
+  /* Une variation plus sombre pour le bouton de démarrage */
+  --color-nexora-btn-start: #0076F5;
+  
+  /* Un bleu-noir intermédiaire pour les cartes ou le menu déroulant */
+  --color-nexora-card-dark: #121621;
+  
+  /* Une variation du bleu pour les éléments de survol ou de contour */
+  --color-nexora-accent: #0081E6;
+
+  /* --- TYPOGRAPHIE --- */
+  /* On utilise Inter, qui ressemble à la police épurée de l'image */
+  --font-family-body: 'Inter', sans-serif;
+  --font-family-display: 'Inter', sans-serif; /* Pour les grands titres */
+
+  /* --- EFFETS DE LUMIÈRE --- */
+  /* Pour l'effet de glow derrière le logo ou sous la barre de navigation */
+  --effect-glow-blue: 0px 0px 15px rgba(0, 163, 255, 0.4);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Appliquer les styles de base */
+@layer base {
+  body {
+    background-color: var(--color-nexora-bg);
+    color: #FFFFFF; /* Le texte de base est blanc */
+    font-family: var(--font-family-body);
+    font-feature-settings: "cv11"; /* Améliorations de lisibilité pour Inter */
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Style par défaut pour les titres */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-family-display);
+    font-weight: 700; /* Titres épais comme dans l'image */
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* --- CLASSES D'UTILITÉ PERSONNALISÉES (Style d'image) --- */
+@layer utilities {
+  /* Le dégradé subtil derrière le titre principal "Sites Web Professionnels" */
+  .text-glow-header {
+    text-shadow: 0px 0px 20px rgba(0, 163, 255, 0.6);
+  }
+
+  /* L'effet de glow subtil autour du logo ou du CTA */
+  .glow-box {
+    box-shadow: var(--effect-glow-blue);
+  }
 }
