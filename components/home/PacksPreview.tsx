@@ -1,6 +1,8 @@
 "use client";
 
 import { motion, Variants } from "framer-motion";
+import Link from "next/link";
+import { packs } from "@/lib/formations-data";
 
 // === ICÔNES SVG VECTORIELLES ===
 function UserBadgeIcon() {
@@ -29,15 +31,6 @@ function CheckCircleIcon() {
     </svg>
   );
 }
-
-// === DONNÉES DES PACKS ===
-const packs = [
-  { id: "01", name: "Web Starter", stack: ["HTML", "CSS", "JavaScript", "Tailwind CSS"], lead: "Équipe", popular: false },
-  { id: "02", name: "PHP Web", stack: ["HTML", "CSS", "JavaScript", "PHP"], lead: "Équipe", popular: false },
-  { id: "03", name: "Spring Boot", stack: ["Spring Boot", "Angular"], lead: "Équipe", popular: true },
-  { id: "04", name: "Next.js Pro", stack: ["Next.js", "React", "Tailwind CSS"], lead: "Équipe", popular: true },
-  { id: "05", name: "Conception Projets", stack: ["Cahier des charges", "Merise / UML", "Figma"], lead: "Équipe", popular: true },
-];
 
 // === VARIANTS D'ANIMATIONS TYPÉS ===
 const containerVariants: Variants = {
@@ -82,6 +75,13 @@ export default function PacksPreview() {
           <p className="text-gray-400 text-sm md:text-base leading-relaxed">
             Apprenez, créez et innovez à travers nos packs pratiques encadrés par des experts.
           </p>
+          <Link
+            href="/formations"
+            className="inline-flex items-center gap-1.5 mt-5 text-sm font-semibold text-[#00A3FF] hover:translate-x-1 transition-transform duration-300"
+          >
+            Voir tous les packs
+            <ArrowRightIcon />
+          </Link>
         </motion.div>
 
         {/* Grille des packs */}
@@ -101,7 +101,7 @@ export default function PacksPreview() {
                 borderColor: "rgba(0,163,255,0.5)",
                 boxShadow: "0px 10px 30px rgba(0,163,255,0.15)"
               }}
-              className={`relative flex flex-col justify-between p-6 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border transition-all duration-300 backdrop-blur-xl group cursor-pointer overflow-hidden ${
+              className={`relative flex flex-col justify-between p-6 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border transition-all duration-300 backdrop-blur-xl group overflow-hidden ${
                 pack.popular ? "border-[#00A3FF]/60" : "border-white/10"
               }`}
             >
@@ -145,10 +145,13 @@ export default function PacksPreview() {
                   <UserBadgeIcon />
                   <span>{pack.lead}</span>
                 </div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-[#00A3FF] group-hover:translate-x-1 transition-transform duration-300">
+                <Link
+                  href={`/formations/${pack.slug}`}
+                  className="flex items-center gap-1 text-xs font-semibold text-[#00A3FF] group-hover:translate-x-1 transition-transform duration-300"
+                >
                   <span>Souscrire</span>
                   <ArrowRightIcon />
-                </div>
+                </Link>
               </div>
             </motion.div>
           ))}

@@ -1,87 +1,144 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import Link from "next/link";
+import { packs } from "@/lib/formations-data";
 
-const formations = [
-  {
-    title: "Développement Frontend Moderne",
-    duration: "3 Mois",
-    level: "Débutant à Intermédiaire",
-    topics: ["HTML/CSS", "JavaScript ES6+", "React.js", "Tailwind CSS"],
-    status: "Inscriptions ouvertes",
-  },
-  {
-    title: "Fullstack Next.js & Architecture Web",
-    duration: "3 Mois",
-    level: "Avancé",
-    topics: ["Next.js App Router", "TypeScript", "Prisma / SQL", "Déploiement Vercel"],
-    status: "Prochaine session",
-  },
-  {
-    title: "Design UI/UX & Prototypage Pro",
-    duration: "2 Mois",
-    level: "Tous niveaux",
-    topics: ["Figma Pro", "Wireframing", "Design Systems", "User Research"],
-    status: "Bientôt disponible",
-  },
-];
+function CheckCircleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00A3FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
+  );
+}
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 90, damping: 14 } },
+};
 
 export default function FormationsPage() {
   return (
-    <main className="min-h-screen bg-[#0B0E17] text-white pt-32 pb-20 px-4 sm:px-8 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto">
+    <main className="min-h-screen bg-[#0B0E17] text-white pt-32 pb-24 px-4 sm:px-8 relative overflow-hidden">
+      {/* Halo lumineux d'arrière-plan */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#00A3FF]/10 blur-[160px] rounded-full pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* En-tête */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-16"
+          transition={{ duration: 0.6 }}
+          className="text-center max-w-2xl mx-auto mb-16"
         >
-          <span className="px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[#00A3FF] text-xs font-semibold">
+          <span className="inline-block px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[#00A3FF] text-xs font-semibold uppercase tracking-wider mb-4">
             Nexora Academy
           </span>
-          <h1 className="text-4xl sm:text-6xl font-black mt-4">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight">
             Formez-vous aux métiers du <br />
-            <span className="text-[#00A3FF]">développement & du design</span>
+            <span className="text-[#00A3FF] drop-shadow-[0_0_25px_rgba(0,163,255,0.7)]">développement & du design</span>
           </h1>
+          <p className="text-gray-400 text-sm sm:text-base mt-5 leading-relaxed">
+            5 packs pratiques, encadrés par notre équipe, sur 3 mois à raison de 3 sessions par semaine.
+          </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {formations.map((f, idx) => (
+        {/* Grille des packs */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+        >
+          {packs.map((pack) => (
             <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="p-8 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between backdrop-blur-md relative overflow-hidden"
+              key={pack.id}
+              variants={cardVariants}
+              whileHover={{ y: -8, borderColor: "rgba(0,163,255,0.5)", boxShadow: "0px 10px 30px rgba(0,163,255,0.15)" }}
+              className={`relative flex flex-col justify-between p-7 rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border transition-all duration-300 backdrop-blur-xl group overflow-hidden ${
+                pack.popular ? "border-[#00A3FF]/60" : "border-white/10"
+              }`}
             >
-              <div>
-                <span className="inline-block px-3 py-1 rounded-full bg-[#00A3FF]/20 text-[#00A3FF] text-xs font-bold mb-4">
-                  {f.status}
-                </span>
-                <h3 className="text-xl font-bold mb-2">{f.title}</h3>
-                <p className="text-xs text-gray-400 mb-6">
-                  Durée: <span className="text-white font-semibold">{f.duration}</span> • Niveau: <span className="text-white font-semibold">{f.level}</span>
-                </p>
+              <div className="absolute inset-0 bg-gradient-to-br from-[#00A3FF]/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                <div className="space-y-2 mb-8">
-                  <p className="text-xs font-semibold text-gray-300">Programme clé :</p>
-                  {f.topics.map((t, tIdx) => (
-                    <div key={tIdx} className="flex items-center gap-2 text-sm text-gray-400">
-                      <span className="text-[#00A3FF]">•</span> {t}
-                    </div>
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-mono font-bold text-[#00A3FF] bg-[#00A3FF]/10 border border-[#00A3FF]/20 px-2.5 py-1 rounded-md">
+                    Pack {pack.id}
+                  </span>
+                  {pack.popular && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-black bg-[#00A3FF] px-2 py-0.5 rounded-full">
+                      Populaire
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#00A3FF] transition-colors duration-300">
+                  {pack.name}
+                </h3>
+                <p className="text-xs text-gray-400 mb-4">
+                  {pack.duration} • {pack.level}
+                </p>
+                <p className="text-gray-400 text-sm leading-relaxed mb-5">{pack.description}</p>
+
+                <div className="flex flex-wrap gap-1.5 mb-6">
+                  {pack.stack.map((tech) => (
+                    <span
+                      key={tech}
+                      className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 group-hover:border-[#00A3FF]/30 transition-colors"
+                    >
+                      {tech}
+                    </span>
                   ))}
                 </div>
               </div>
 
               <Link
-                href="/devis"
-                className="w-full py-3 rounded-xl bg-white/10 hover:bg-[#00A3FF] text-center font-bold text-sm transition duration-300 block"
+                href={`/formations/${pack.slug}`}
+                className="pt-4 border-t border-white/10 flex items-center justify-between text-sm font-semibold text-[#00A3FF] group-hover:translate-x-1 transition-transform duration-300"
               >
-                S'inscrire à la formation
+                <span>Voir le programme</span>
+                <ArrowRightIcon />
               </Link>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
+
+        {/* Garanties */}
+        <motion.div
+          className="mt-16 pt-8 border-t border-white/5 flex flex-wrap items-center justify-center gap-8 text-xs md:text-sm text-gray-400"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircleIcon />
+            <span>Projets 100% pratiques</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircleIcon />
+            <span>Suivi personnalisé</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircleIcon />
+            <span>Attestation de fin de parcours</span>
+          </div>
+        </motion.div>
       </div>
     </main>
   );
