@@ -57,8 +57,8 @@ export default function Navbar() {
             transition={{ type: "spring", stiffness: 300 }}
             className="relative w-10 h-10 flex items-center justify-center shrink-0"
           >
-             <Image
-              src="/log.png" // Placez votre fichier image dans le dossier public/ (ex: public/logo.png)
+            <Image
+              src="/log.png"
               alt="Nexora Labs Logo"
               width={40}
               height={40}
@@ -135,7 +135,7 @@ export default function Navbar() {
                     <p className="text-xs text-gray-400">
                       Pas encore de compte ?{" "}
                       <Link
-                        href="/formations"
+                        href="/inscription"
                         onClick={() => setOpen(false)}
                         className="text-[#00A3FF] font-semibold hover:underline"
                       >

@@ -132,7 +132,7 @@ export default function PackDetailPage() {
               </p>
               <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                 <Link
-                  href={`/devis?pack=${pack.slug}`}
+                  href={`/inscription?role=etudiant&pack=${pack.slug}`}
                   className="flex items-center justify-center px-6 py-3.5 rounded-full bg-[#00A3FF] hover:bg-[#0076F5] text-white font-bold text-sm shadow-[0_0_25px_rgba(0,163,255,0.5)] transition duration-300 w-full"
                 >
                   S'inscrire à ce pack

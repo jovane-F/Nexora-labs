@@ -1,209 +1,232 @@
-"use client";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { dashboardPathForRole, getSession } from "@/lib/session";
+import { computePaymentState } from "@/lib/payment";
+import { CLASS_MAX_STUDENTS } from "@/lib/classes";
+import StudentDashboard, {
+  type AssignmentStatus,
+  type PaymentAction,
+  type DashboardData,
+  type DashboardPack,
+} from "@/components/dashboard/StudentDashboard";
 
-import { motion, Variants } from "framer-motion";
+// Les données dépendent de l'étudiant connecté : jamais de cache partagé.
+export const dynamic = "force-dynamic";
 
-// === ICÔNES ===
-function CalendarIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
+const dateFormat = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/** N'autorise que les liens http(s) : évite qu'une URL de type javascript: soit rendue cliquable. */
+function safeUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
-function FileIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  );
-}
+export default async function StudentDashboardPage() {
+  const session = await getSession();
+  if (!session || !/^\d+$/.test(session.uid)) {
+    redirect("/connexion?espace=etudiant");
+  }
 
-function PlayIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-      <polygon points="6 3 20 12 6 21 6 3" />
-    </svg>
-  );
-}
+  const studentId = BigInt(session.uid);
 
-// === DONNÉES DE DÉMONSTRATION ===
-const sessions = [
-  { day: "Lundi", time: "18h00 - 20h00", topic: "React — Gestion d'état & hooks", live: true },
-  { day: "Mercredi", time: "18h00 - 20h00", topic: "Next.js — App Router", live: false },
-  { day: "Vendredi", time: "18h00 - 20h00", topic: "Atelier pratique en groupe", live: false },
-];
+  const user = await prisma.user.findUnique({
+    where: { id: studentId },
+    select: { firstName: true, role: true, isActive: true },
+  });
 
-const assignments = [
-  { title: "TP — Composant de navigation", due: "Lundi 28 sept.", status: "à rendre" as const },
-  { title: "TP — Formulaire contrôlé", due: "Il y a 3 jours", status: "rendu" as const },
-  { title: "TP — Consommation d'API", due: "Il y a 8 jours", status: "noté" as const, note: "16/20" },
-];
+  if (!user || !user.isActive) {
+    redirect("/connexion?espace=etudiant");
+  }
+  if (String(user.role) !== "STUDENT") {
+    redirect(dashboardPathForRole(String(user.role)));
+  }
 
-const library = [
-  { module: "Mois 1 — Fondamentaux React", type: "Vidéo", title: "Composants & hooks", locked: false },
-  { module: "Mois 1 — Fondamentaux React", type: "Support PDF", title: "Fiche récap Tailwind CSS", locked: false },
-  { module: "Mois 2 — Next.js en profondeur", type: "Vidéo", title: "App Router & Server Components", locked: false },
-  { module: "Mois 3 — Projet final", type: "Support PDF", title: "Cahier des charges du projet", locked: true },
-];
+  // 1. Uniquement les inscriptions de CET étudiant
+  const enrollments = (
+    await prisma.enrollment.findMany({
+      where: { studentId },
+      orderBy: { enrollmentDate: "asc" },
+      select: { id: true, sessionId: true, status: true },
+    })
+  ).filter((e) => String(e.status) !== "CANCELLED");
 
-const statusStyles: Record<(typeof assignments)[number]["status"], string> = {
-  "à rendre": "text-[#00A3FF] bg-[#00A3FF]/10 border-[#00A3FF]/30",
-  rendu: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
-  noté: "text-green-400 bg-green-400/10 border-green-400/30",
-};
+  // 2. Leurs sessions, puis les packs de ces sessions
+  const sessions = await prisma.academySession.findMany({
+    where: { id: { in: enrollments.map((e) => e.sessionId) } },
+    select: {
+      id: true,
+      packId: true,
+      title: true,
+      startDate: true,
+      endDate: true,
+      liveScheduleInfo: true,
+      communityGroupLink: true,
+    },
+  });
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
+  const packIds = Array.from(new Set(sessions.map((s) => s.packId)));
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
+  const packs = await prisma.pack.findMany({
+    where: { id: { in: packIds } },
+    select: { id: true, title: true, slug: true },
+  });
+  const packById = new Map(packs.map((p) => [p.id, p]));
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 16 } },
-};
+  // Ma classe : places occupées dans la session + prénoms des camarades dont l'inscription est confirmée
+  const classEnrollments = (
+    await prisma.enrollment.findMany({
+      where: { sessionId: { in: sessions.map((s) => s.id) } },
+      select: { sessionId: true, studentId: true, status: true },
+    })
+  ).filter((e) => String(e.status) !== "CANCELLED");
+  const classmates = await prisma.user.findMany({
+    where: { id: { in: classEnrollments.map((e) => e.studentId) } },
+    select: { id: true, firstName: true, lastName: true },
+  });
+  const classmateById = new Map(classmates.map((u) => [u.id, u]));
 
-export default function StudentDashboardPage() {
-  return (
-    <main className="min-h-screen bg-[#0B0E17] text-white pt-28 pb-20 px-4 sm:px-8 relative overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-[#00A3FF]/10 blur-[160px] rounded-full pointer-events-none" />
+  // 3. Contenus, devoirs et rendus : seulement ceux de ces packs / sessions
+  const courses = await prisma.course.findMany({
+    where: { packId: { in: packIds } },
+    orderBy: { orderIndex: "asc" },
+    select: { id: true, packId: true, title: true, description: true },
+  });
 
-      <div className="max-w-6xl mx-auto relative z-10">
-        {/* En-tête */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <span className="inline-block px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[#00A3FF] text-xs font-semibold uppercase tracking-wider mb-3">
-            Espace étudiant
-          </span>
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Bonjour 👋</h1>
-              <p className="text-gray-400 text-sm mt-2">
-                Pack en cours : <span className="text-white font-semibold">Next.js Pro</span> — Mois 2 sur 3
-              </p>
-            </div>
-            <div className="w-full sm:w-56">
-              <div className="flex items-center justify-between text-xs text-gray-400 mb-1.5">
-                <span>Progression</span>
-                <span>58%</span>
-              </div>
-              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "58%" }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full bg-[#00A3FF] rounded-full"
-                />
-              </div>
-            </div>
-          </div>
-        </motion.div>
+  const resources = await prisma.courseResource.findMany({
+    where: { courseId: { in: courses.map((c) => c.id) } },
+    select: { id: true, courseId: true, title: true, type: true, url: true },
+  });
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Planning */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="lg:col-span-1 p-6 rounded-2xl bg-white/[0.03] border border-white/10 h-fit"
-          >
-            <div className="flex items-center gap-2.5 mb-5 text-white">
-              <CalendarIcon />
-              <h2 className="text-base font-bold">Planning de la semaine</h2>
-            </div>
-            <div className="space-y-3">
-              {sessions.map((s) => (
-                <motion.div
-                  key={s.day}
-                  variants={itemVariants}
-                  className={`p-4 rounded-xl border ${
-                    s.live ? "border-[#00A3FF]/50 bg-[#00A3FF]/10" : "border-white/10 bg-white/[0.02]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-semibold text-white">{s.day}</span>
-                    {s.live && (
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[#00A3FF]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#00A3FF] animate-pulse" />
-                        Prochain
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-400">{s.time}</p>
-                  <p className="text-xs text-gray-300 mt-1">{s.topic}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+  const assignments = await prisma.assignment.findMany({
+    where: { sessionId: { in: sessions.map((s) => s.id) } },
+    orderBy: { dueDate: "asc" },
+    select: { id: true, sessionId: true, title: true, dueDate: true },
+  });
 
-          {/* Devoirs & rendus */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="lg:col-span-1 p-6 rounded-2xl bg-white/[0.03] border border-white/10 h-fit"
-          >
-            <div className="flex items-center gap-2.5 mb-5 text-white">
-              <FileIcon />
-              <h2 className="text-base font-bold">Devoirs & rendus</h2>
-            </div>
-            <div className="space-y-3">
-              {assignments.map((a) => (
-                <motion.div key={a.title} variants={itemVariants} className="p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="text-sm text-gray-200 leading-snug">{a.title}</p>
-                    <span className={`shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${statusStyles[a.status]}`}>
-                      {a.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {a.status === "à rendre" ? "À rendre le " : "Rendu — "}
-                    {a.due}
-                    {a.note ? ` · ${a.note}` : ""}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+  const submissions = await prisma.studentSubmission.findMany({
+    where: { studentId, assignmentId: { in: assignments.map((a) => a.id) } },
+    select: { assignmentId: true, grade: true },
+  });
+  const submissionByAssignment = new Map(submissions.map((s) => [s.assignmentId, s]));
 
-          {/* Bibliothèque de cours */}
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className="lg:col-span-1 p-6 rounded-2xl bg-white/[0.03] border border-white/10 h-fit"
-          >
-            <div className="flex items-center gap-2.5 mb-5 text-white">
-              <PlayIcon />
-              <h2 className="text-base font-bold">Vidéos & supports</h2>
-            </div>
-            <div className="space-y-3">
-              {library.map((item) => (
-                <motion.div
-                  key={item.title}
-                  variants={itemVariants}
-                  className={`p-4 rounded-xl border border-white/10 bg-white/[0.02] flex items-center justify-between gap-3 ${
-                    item.locked ? "opacity-50" : "hover:border-[#00A3FF]/40 transition-colors cursor-pointer"
-                  }`}
-                >
-                  <div>
-                    <p className="text-[10px] text-gray-500 mb-1">{item.module}</p>
-                    <p className="text-sm text-gray-200">{item.title}</p>
-                    <span className="text-[11px] text-[#00A3FF]">{item.type}</span>
-                  </div>
-                  {item.locked && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-gray-500">
-                      <rect x="3" y="11" width="18" height="11" rx="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    </main>
-  );
+  const payments = await prisma.payment.findMany({
+    where: { enrollmentId: { in: enrollments.map((e) => e.id) } },
+    select: { enrollmentId: true, status: true, type: true, transactionReference: true },
+  });
+
+  const now = Date.now();
+
+  const dashboardPacks: DashboardPack[] = [];
+
+  for (const enrollment of enrollments) {
+    const dbSession = sessionById.get(enrollment.sessionId);
+    if (!dbSession) continue;
+    const pack = packById.get(dbSession.packId);
+    if (!pack) continue;
+
+    const status = String(enrollment.status);
+    // Tant que l'inscription n'est pas confirmée, les liens des ressources ne sont pas envoyés au navigateur.
+    const unlocked = status === "ACTIVE" || status === "COMPLETED";
+
+    const start = dbSession.startDate.getTime();
+    const end = dbSession.endDate.getTime();
+    const phase = now < start ? "upcoming" : now > end ? "finished" : "running";
+    const progress =
+      phase === "upcoming" || end <= start
+        ? 0
+        : phase === "finished"
+          ? 100
+          : Math.round(((now - start) / (end - start)) * 100);
+
+    // État des paiements de cette inscription → quel bouton afficher
+    const enrollmentPayments = payments.filter((p) => p.enrollmentId === enrollment.id);
+    const paymentState = computePaymentState(
+      enrollmentPayments.map((p) => ({ status: String(p.status), type: String(p.type) }))
+    );
+    const pendingPayment = enrollmentPayments.find((p) => String(p.status) === "PENDING");
+
+    let paymentAction: PaymentAction;
+    if (paymentState.hasPending) paymentAction = "verifying";
+    else if (paymentState.nextStep === "done") paymentAction = "none";
+    else if (paymentState.nextStep === "second") paymentAction = "pay_second";
+    else paymentAction = status === "PENDING" ? "pay" : "none"; // activée à la main : rien à payer
+
+    const classSeats = classEnrollments.filter((e) => e.sessionId === dbSession.id);
+    const mates = classSeats
+      .filter((e) => e.studentId !== studentId && ["ACTIVE", "COMPLETED"].includes(String(e.status)))
+      .flatMap((e) => {
+        const mate = classmateById.get(e.studentId);
+        return mate ? [`${mate.firstName} ${mate.lastName.charAt(0)}.`] : [];
+      });
+
+    dashboardPacks.push({
+      enrollmentId: enrollment.id.toString(),
+      status,
+      unlocked,
+      classe: { size: classSeats.length, max: CLASS_MAX_STUDENTS, mates },
+      payment: {
+        action: paymentAction,
+        pendingReference: pendingPayment?.transactionReference ?? null,
+        lastRejected: paymentState.lastRejected,
+      },
+      pack: { id: pack.id, title: pack.title, slug: pack.slug },
+      session: {
+        title: dbSession.title,
+        startLabel: dateFormat.format(dbSession.startDate),
+        endLabel: dateFormat.format(dbSession.endDate),
+        liveScheduleInfo: dbSession.liveScheduleInfo,
+        communityGroupLink: unlocked ? safeUrl(dbSession.communityGroupLink) : null,
+        phase,
+        progress,
+      },
+      courses: courses
+        .filter((c) => c.packId === pack.id)
+        .map((c) => ({
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          resources: resources
+            .filter((r) => r.courseId === c.id)
+            .map((r) => ({
+              id: r.id,
+              title: r.title,
+              type: String(r.type),
+              url: unlocked ? safeUrl(r.url) : null,
+            })),
+        })),
+      assignments: assignments
+        .filter((a) => a.sessionId === dbSession.id)
+        .map((a) => {
+          const submission = submissionByAssignment.get(a.id);
+          const assignmentStatus: AssignmentStatus = submission
+            ? submission.grade
+              ? "noté"
+              : "rendu"
+            : a.dueDate.getTime() < now
+              ? "en retard"
+              : "à rendre";
+          return {
+            id: a.id,
+            title: a.title,
+            dueLabel: dateFormat.format(a.dueDate),
+            status: assignmentStatus,
+            grade: submission?.grade ?? null,
+          };
+        }),
+    });
+  }
+
+  const data: DashboardData = { firstName: user.firstName, packs: dashboardPacks };
+
+  return <StudentDashboard data={data} />;
 }

@@ -20,8 +20,8 @@ const redirectPaths: Record<Space, string> = {
 };
 
 const signupBySpace: Record<Space, { label: string; href: string } | null> = {
-  etudiant: { label: "Choisis un pack pour t'inscrire", href: "/formations" },
-  client: { label: "Envoie ta demande de devis", href: "/devis" },
+  etudiant: { label: "Crée ton compte étudiant", href: "/inscription?role=etudiant" },
+  client: { label: "Crée ton compte client", href: "/inscription?role=client" },
   admin: null,
 };
 
@@ -33,6 +33,9 @@ function ConnexionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialSpace = searchParams.get("espace");
+  const justSignedUp = searchParams.get("inscrit") === "1";
+  const packsCount = Number(searchParams.get("packs") ?? "0") || 0;
+  const unavailableCount = Number(searchParams.get("nonDispo") ?? "0") || 0;
 
   const [space, setSpace] = useState<Space>(isSpace(initialSpace) ? initialSpace : "etudiant");
   const [email, setEmail] = useState("");
@@ -40,7 +43,7 @@ function ConnexionForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
@@ -51,13 +54,27 @@ function ConnexionForm() {
 
     setLoading(true);
 
-    // TODO: remplacer par un vrai appel d'authentification (API route / NextAuth / etc.)
-    // qui vérifie les identifiants, le rôle associé au compte, et crée une session
-    // avant de rediriger vers le bon espace.
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, espace: space }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Une erreur est survenue. Réessaie plus tard.");
+        setLoading(false);
+        return;
+      }
+
+      router.push(data.redirect || redirectPaths[space]);
+      router.refresh();
+    } catch {
+      setError("Impossible de contacter le serveur. Réessaie plus tard.");
       setLoading(false);
-      router.push(redirectPaths[space]);
-    }, 600);
+    }
   }
 
   const signup = signupBySpace[space];
@@ -79,6 +96,20 @@ function ConnexionForm() {
           <h1 className="text-3xl font-black tracking-tight">Connexion</h1>
           <p className="text-gray-400 text-sm mt-2">{spaceLabels[space]}</p>
         </div>
+
+        {justSignedUp && (
+          <div className="mb-6 p-4 rounded-xl bg-green-400/10 border border-green-400/30 text-sm text-green-300">
+            Compte créé avec succès.
+            {packsCount > 0 &&
+              ` Inscription enregistrée pour ${packsCount} pack${packsCount > 1 ? "s" : ""} (en attente de confirmation).`}{" "}
+            Connecte-toi pour accéder à ton espace.
+            {unavailableCount > 0 && (
+              <span className="block mt-1 text-yellow-300">
+                {unavailableCount} pack{unavailableCount > 1 ? "s n'ont" : " n'a"} pas de session ouverte pour le moment : l'équipe te recontactera.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Sélecteur d'espace */}
         <div className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-white/10 mb-6">
