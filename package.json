@@ -16,23 +16,17 @@
     "framer-motion": "^13.1.1",
     "mariadb": "^3.5.4",
     "next": "16.3.2",
-<<<<<<< HEAD
+    "nodemailer": "^10.0.10",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
-=======
-    "nodemailer": "^10.0.10",
->>>>>>> ae350a577873a5460ab537fb56a3a64a01c99a3f
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-<<<<<<< HEAD
-    "@types/pg": "^8.23.1",
-=======
     "@types/nodemailer": "^8.0.2",
->>>>>>> ae350a577873a5460ab537fb56a3a64a01c99a3f
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.5.4",
