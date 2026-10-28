@@ -2,9 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
 export const CALL_MAX_MINUTES = 240; // un cours audio est coupé automatiquement après 4 h
-export const CALL_MONTHLY_LIMIT_MINUTES = 40 * 60; // quota par formateur et par mois
+export const CALL_MONTHLY_LIMIT_MINUTES = 25 * 60; // quota par formateur et par mois
 export const CALL_MONTHLY_WARNING_MINUTES = 35 * 60;
-export const MESSAGE_MAX_LENGTH = 2000;
+export const MESSAGE_MAX_LENGTH = 2000; 
 
 export type ClassroomUser = { id: bigint; firstName: string; lastName: string; isAdmin: boolean };
 
